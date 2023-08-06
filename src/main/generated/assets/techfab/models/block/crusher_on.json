@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/orientable_with_bottom",
+  "textures": {
+    "bottom": "techfab:block/crusher_bottom",
+    "front": "techfab:block/crusher_front_on",
+    "side": "techfab:block/crusher_side",
+    "top": "techfab:block/crusher_top"
+  }
+}
