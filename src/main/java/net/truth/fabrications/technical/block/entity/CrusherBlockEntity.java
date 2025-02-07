@@ -1,5 +1,8 @@
 package net.truth.fabrications.technical.block.entity;
 
+import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
+import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
@@ -12,16 +15,26 @@ import net.minecraft.network.PacketByteBuf;
 import net.minecraft.screen.PropertyDelegate;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.truth.fabrications.technical.TechnicalFabrications;
+import net.truth.fabrications.technical.networking.ModMessages;
 import net.truth.fabrications.technical.screen.handlers.CrusherScreenHandler;
 import org.jetbrains.annotations.Nullable;
 
 public class CrusherBlockEntity extends BlockEntity implements ExtendedScreenHandlerFactory, ImplementedInventory {
     private final DefaultedList<ItemStack> inventory = DefaultedList.ofSize(7, ItemStack.EMPTY);
+
+    private static final int INPUT_SLOT = 0;
+    private static final int OUTPUT_SLOT_1 = 1;
+    private static final int OUTPUT_SLOT_2 = 2;
+    private static final int OUTPUT_SLOT_3 = 3;
+    private static final int SEC_OUTPUT_SLOT_1 = 4;
+    private static final int SEC_OUTPUT_SLOT_2 = 5;
+    private static final int ENERGY_ITEM_SLOT = 6;
 
     protected final PropertyDelegate propertyDelegate;
     private int progress = 0;
@@ -52,6 +65,30 @@ public class CrusherBlockEntity extends BlockEntity implements ExtendedScreenHan
                 return 2;
             }
         };
+    }
+
+    @Override
+    public void markDirty() {
+        if(!world.isClient()) {
+            PacketByteBuf data = PacketByteBufs.create();
+            data.writeInt(inventory.size());
+            for(int i = 0; i < inventory.size(); i++) {
+                data.writeItemStack(inventory.get(i));
+            }
+            data.writeBlockPos(getPos());
+
+            for(ServerPlayerEntity player : PlayerLookup.tracking((ServerWorld) world, getPos())) {
+                ServerPlayNetworking.send(player, ModMessages.ITEM_SYNC, data);
+            }
+        }
+
+        super.markDirty();
+    }
+
+    public void setInventory(DefaultedList<ItemStack> list) {
+        for(int i = 0; i < list.size(); i++) {
+            this.inventory.set(i, list.get(i));
+        }
     }
 
     @Override
